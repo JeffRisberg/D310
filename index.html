@@ -4,9 +4,11 @@
 <head>
   <title>D3 10</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-  <script type="text/javascript" src="js/d3.js"></script>
-  <script type="text/javascript" src="js/nv.d3.js"></script>
   <link href="css/nv.d3.css" rel="stylesheet">
+  
+  <script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>    
+  <script type="text/javascript" src="js/d3.js"></script>
+  <script type="text/javascript" src="js/nv.d3.js"></script>  
 </head>
 <body>
 
@@ -21,6 +23,16 @@
 }
 </style>
 
+<select id="plotMode" name="plotMode">
+  <option value="smoothLine">Smooth Line</option>
+  <option value="points">Points</option>
+  <option value="bars">Bars</option>
+</select>
+
+<input type="checkbox" id="highlight">Highlight
+
+<input type="checkbox" id="includeZero">Include Zero
+
 <div id="chart1">
   <svg></svg>
 </div>
@@ -29,78 +41,119 @@
 </div>
 
 <script type="text/javascript"> 
+  $(document).ready(function () {
 
-  nv.addGraph(function() {  
-    var chart = nv.models.lineChart();
+    var plotMode = "smoothLine";
+    var highlight = false;
+    var includeZero = false;   
 
-    chart.xAxis
-      .axisLabel('Time (ms)')
-      .tickFormat(d3.format(',r'));
-
-    chart.yAxis
-      .axisLabel('Voltage (v)')
-      .tickFormat(d3.format('.02f'));
-
-    d3.select('#chart1 svg')
-     .datum(sinAndCos())
-     .transition().duration(1500)
-     .call(chart);
-
-    nv.utils.windowResize(function() {
-      d3.select('#chart1 svg').call(chart) 
+    $("#plotMode").on("change", function (e) {
+      plotMode = $('#plotMode').val();
+      
+      redraw();
     });
 
-    return chart;
-  });
+    $("#highlight").on("change", function (e) {
+      highlight = $('#highlight').is(':checked');
 
-  d3.json("players.json", function(error, memberList) {   
-	  console.log(error);
-	  console.log(memberList);
-	  
-	  nv.addGraph(function() {
+      redraw();
+    });
+
+    $("#includeZero").on("change", function (e) {
+      includeZero = $('#includeZero').is(':checked');
+
+      redraw();      
+    });
+
+    redraw();
+
+    function redraw() {
+      nv.addGraph(function() {  
+		    var chart = nv.models.lineChart();
+		
+		    chart.xAxis
+		      .axisLabel('Time (ms)')
+		      .tickFormat(d3.format(',r'));
+		
+		    chart.yAxis
+		      .axisLabel('Voltage (v)')
+		      .tickFormat(d3.format('.02f'));
+		
+		    if (includeZero) {
+          chart.forceY([0]);
+        }
+        else {
+          chart.forceY([]);
+        }
+		    
+		    $('#chart1 svg').empty();
+		    
+		    d3.select('#chart1 svg')
+		     .datum(sinAndCos())
+		     .transition().duration(1500)
+		     .call(chart);
+		
+		    nv.utils.windowResize(function() {
+		      d3.select('#chart1 svg').call(chart) 
+		    });
 	
-	    var chart = nv.models.discreteBarChart()
-	        .x(function(d) { return d.label })
-	        .y(function(d) { return d.value })
-	        .staggerLabels(true)
-	        .tooltips(false)
-	        .showValues(true)
-	   
-	    d3.select('#chart2 svg')
-	        .datum(memberList)
-	      .transition().duration(500)
-	        .call(chart);
-	
-	    nv.utils.windowResize(chart.update);   
-	
-	    return chart;
-	  });
-  });
-  
-  function sinAndCos() {
-    var sin = [], cos = [];
- 
-    for (var i = 0; i < 15; i++) {
-      sin.push({x: i, y: Math.sin(i/3)});
-      cos.push({x: i, y: .5 * Math.cos(i/3)});
+	      return chart;
+	    });     
     }
- 
-    return [
-     {
-       values: sin,
-       key: 'Sine Wave',
-       'stroke-width':'5px',
-       'use-points':'5px',
-       color: '#ff7f0e'
-     },
-     {
-       values: cos,
-       key: 'Cosine Wave',
-       color: '#2ca02c'
-     }
-    ];
-  }
 
+	  d3.json("players.json", function(error, memberList) {   
+		  console.log(error);
+		  console.log(memberList);
+		  
+		  nv.addGraph(function() {		
+		    var chart = nv.models.discreteBarChart()
+		        .x(function(d) { return d.label })
+		        .y(function(d) { return d.value })
+		        .staggerLabels(true)
+		        .tooltips(false)
+		        .showValues(true)
+		   
+		    d3.select('#chart2 svg')
+		        .datum(memberList)
+		      .transition().duration(500)
+		        .call(chart);
+		
+		    nv.utils.windowResize(chart.update);   
+		
+		    return chart;
+		  });
+	  });
+	  
+	  function sinAndCos() {
+	    var sin = [], cos = [];
+	 
+	    for (var i = 0; i < 15; i++) {
+	      sin.push({x: i, y: 2.5 + Math.sin(i/3)});
+	      cos.push({x: i, y: 2 + .5 * Math.cos(i/3)});
+	    }
+	 
+	    var series1 = {
+        values: sin,
+        key: 'Sine Wave',        
+        color: '#ff7f0e'
+      };
+	    
+	    if (plotMode == "points") {
+	    	series1['use-points'] = true;
+	    }
+	    if (highlight) {
+	      series1['stroke-width'] = "8px";	      
+	    }
+	    
+	    var series2 = {
+  		  values: cos,
+        key: 'Cosine Wave',
+        color: '#2ca02c'
+      };
+	    	   
+	    return [series1, series2];	    
+	  }
+  });
 </script>
 </body>
 </html>

@@ -1,3 +1,10 @@
+// As of 4/17/14, this copy has the following fixes/enhancements:
+//  - Corrected bar drawing multiBarHorizontalChart when forceY is [] (allows for not including zero)
+//  - Added option in stackedAreaChart to support forceY
+//  - In line chart, line width can be specified to drive highlights
+//  - In line chart, use-points option has been added 
+//
+
 (function () {
 
   var nv = window.nv || {};
@@ -5400,7 +5407,6 @@
               .y1(function (d, i) {
                 return y(y.domain()[0] <= 0 ? y.domain()[1] >= 0 ? 0 : y.domain()[1] : y.domain()[0])
               })
-              //.y1(function(d,i) { return y0(0) }) //assuming 0 is within y domain.. may need to tweak this
               .apply(this, [d.values])
           });
 
@@ -5411,6 +5417,7 @@
        
         linePaths.enter().append('path')
           .attr('class', 'nv-line')
+          .style('stroke-width', function(d) { if(d['stroke-width']) return d['stroke-width']; })
           .attr('d', function (d) {
             if (d['use-points'] == null) {              
               return d3.svg.line()
@@ -5428,10 +5435,12 @@
           
         linePaths.enter().append('path')
           .attr('class', 'nv-line')
-          .style("stroke-dasharray", ("5, 10"))
-          .style("stroke-width", ("5"))
-          .attr('d', function (d) {
-            if (d['use-points'] != null) {              
+          .style("stroke-dasharray", 
+              function(d) { return d['stroke-width'] ? (d['stroke-width'], 10) : ("4, 10"); })                 
+          .style('stroke-width', 
+              function(d) { return d['stroke-width'] ? d['stroke-width'] : 4; })          
+          .attr('d', function (d) {           
+            if (d['use-points'] != null) {                           
               return d3.svg.line()                        
                 .x(function (d, i) {
                   return nv.utils.NaNtoZero(x0(getX(d, i)))
