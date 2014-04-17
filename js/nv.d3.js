@@ -5271,6 +5271,7 @@
       .size(16) // default size
       .sizeDomain([16, 256]) //set to speed up calculation, needs to be unset if there is a custom size accessor
     ;
+    scatter.useVoronoi(false);
 
     //============================================================
 
