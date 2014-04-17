@@ -5428,8 +5428,8 @@
           
         linePaths.enter().append('path')
           .attr('class', 'nv-line')
-          .style("stroke-dasharray", ("5, 10"))  // <== This line here!!
-          .style("stroke-width", ("5"))  // <== This line here!!
+          .style("stroke-dasharray", ("5, 10"))
+          .style("stroke-width", ("5"))
           .attr('d', function (d) {
             if (d['use-points'] != null) {              
               return d3.svg.line()                        
