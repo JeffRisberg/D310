@@ -1,26 +1,27 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-        "http://www.w3.org/TR/html4/loose.dtd">
+    "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
   <title>D3 10</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <link href="css/nv.d3.css" rel="stylesheet">
-  
-  <script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>    
+
+  <script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
   <script type="text/javascript" src="js/d3.js"></script>
-  <script type="text/javascript" src="js/nv.d3.js"></script>  
+  <script type="text/javascript" src="js/nv.d3.js"></script>
 </head>
 <body>
 
 <style>
-#chart1 svg {
-  height: 300px;
-  width: 600px;
-}
-#chart2 svg {
-  height: 300px;
-  width: 600px;
-}
+  #chart1 svg {
+    height: 300px;
+    width: 600px;
+  }
+
+  #chart2 svg {
+    height: 300px;
+    width: 600px;
+  }
 </style>
 
 <select id="plotMode" name="plotMode">
@@ -33,6 +34,8 @@
 
 <input type="checkbox" id="includeZero">Include Zero
 
+<input type="checkbox" id="scaleDown">Scale Down
+
 <div id="chart1">
   <svg></svg>
 </div>
@@ -40,16 +43,17 @@
   <svg></svg>
 </div>
 
-<script type="text/javascript"> 
+<script type="text/javascript">
   $(document).ready(function () {
 
     var plotMode = "smoothLine";
     var highlight = false;
-    var includeZero = false;   
+    var includeZero = false;
+    var scaleDownb = false;
 
     $("#plotMode").on("change", function (e) {
       plotMode = $('#plotMode').val();
-      
+
       redraw();
     });
 
@@ -62,97 +66,157 @@
     $("#includeZero").on("change", function (e) {
       includeZero = $('#includeZero').is(':checked');
 
-      redraw();      
+      redraw();
+    });
+
+    $("#scaleDown").on("change", function (e) {
+      scaleDown = $('#scaleDown').is(':checked');
+
+      redraw();
     });
 
     redraw();
 
     function redraw() {
-      nv.addGraph(function() {  
-		    var chart = nv.models.lineChart();
-		
-		    chart.xAxis
-		      .axisLabel('Time (ms)')
-		      .tickFormat(d3.format(',r'));
-		
-		    chart.yAxis
-		      .axisLabel('Voltage (v)')
-		      .tickFormat(d3.format('.02f'));
-		
-		    if (includeZero) {
+      var flatten = function (array) {
+        var result = [], self = arguments.callee;
+        array.forEach(function (item) {
+          Array.prototype.push.apply(
+              result,
+              Array.isArray(item) ? self(item) : [item]
+          );
+        });
+        return result;
+      };
+
+      nv.addGraph(function () {
+        var datum = sinAndCos();
+        var decimals = 2;
+
+        var renderer = d3.format('.0' + decimals + 'f');
+
+        var values = flatten(datum.map(function (stream) {
+          return stream.values;
+        }));
+
+        var minValue = Number.MAX_VALUE;
+        var maxValue = Number.MIN_VALUE;
+
+        values.forEach(function (value) {
+          var y = value.y;
+          var absY = Math.abs(y);
+
+          minValue = Math.min(y, minValue);
+          maxValue = Math.max(y, maxValue);
+        });
+
+        var minValueStr = renderer(minValue);
+        var maxValueStr = renderer(maxValue);
+
+        while (minValueStr == maxValueStr && decimals < 4) {
+          decimals++;
+
+          renderer = d3.format('.0' + decimals + 'f');
+          minValueStr = renderer(minValue);
+          maxValueStr = renderer(maxValue);
+        }
+
+        var chart = nv.models.lineChart();
+
+        chart.xAxis
+            .axisLabel('Time (ms)')
+            .tickFormat(d3.format(',r'));
+
+        chart.yAxis
+            .axisLabel('Voltage (v)')
+            .tickFormat(renderer);
+
+        if (includeZero) {
           chart.forceY([0]);
         }
         else {
           chart.forceY([]);
         }
-		    
-		    $('#chart1 svg').empty();
-		    
-		    d3.select('#chart1 svg')
-		     .datum(sinAndCos())
-		     .transition().duration(1500)
-		     .call(chart);
-		
-		    nv.utils.windowResize(function() {
-		      d3.select('#chart1 svg').call(chart) 
-		    });
-	
-	      return chart;
-	    });     
+
+        chart.yAxis.ticks([2.0, 2.1]);
+
+        $('#chart1 svg').empty();
+
+        d3.select('#chart1 svg')
+            .datum(datum)
+            .transition().duration(1500)
+            .call(chart);
+
+        nv.utils.windowResize(function () {
+          d3.select('#chart1 svg').call(chart)
+        });
+
+        return chart;
+      });
     }
 
-	  d3.json("players.json", function(error, memberList) {   
-		  console.log(error);
-		  console.log(memberList);
-		  
-		  nv.addGraph(function() {		
-		    var chart = nv.models.discreteBarChart()
-		        .x(function(d) { return d.label })
-		        .y(function(d) { return d.value })
-		        .staggerLabels(true)
-		        .tooltips(false)
-		        .showValues(true)
-		   
-		    d3.select('#chart2 svg')
-		        .datum(memberList)
-		      .transition().duration(500)
-		        .call(chart);
-		
-		    nv.utils.windowResize(chart.update);   
-		
-		    return chart;
-		  });
-	  });
-	  
-	  function sinAndCos() {
-	    var sin = [], cos = [];
-	 
-	    for (var i = 0; i < 15; i++) {
-	      sin.push({x: i, y: 2.5 + Math.sin(i/3)});
-	      cos.push({x: i, y: 2 + .5 * Math.cos(i/3)});
-	    }
-	 
-	    var series1 = {
+    d3.json("players.json", function (error, memberList) {
+      console.log(error);
+      console.log(memberList);
+
+      nv.addGraph(function () {
+        var chart = nv.models.discreteBarChart()
+            .x(function (d) {
+              return d.label
+            })
+            .y(function (d) {
+              return d.value
+            })
+            .staggerLabels(true)
+            .tooltips(false)
+            .showValues(true)
+
+        d3.select('#chart2 svg')
+            .datum(memberList)
+            .transition().duration(500)
+            .call(chart);
+
+        nv.utils.windowResize(chart.update);
+
+        return chart;
+      });
+    });
+
+    function sinAndCos() {
+      var sin = [], cos = [];
+
+      for (var i = 0; i < 15; i++) {
+        if (scaleDown) {
+          sin.push({x: i, y: 2 + 0.005 * Math.sin(i / 3)});
+          cos.push({x: i, y: 2 + 0.005 * Math.cos(i / 3)});
+        }
+        else {
+          sin.push({x: i, y: 2 + 0.05 * Math.sin(i / 3)});
+          cos.push({x: i, y: 2 + 0.05 * Math.cos(i / 3)});
+        }
+      }
+
+      var series1 = {
         values: sin,
-        key: 'Sine Wave',        
+        key: 'Sine Wave',
         color: '#ff7f0e'
       };
-	    
-	    if (plotMode == "points") {
-	    	series1['use-points'] = true;
-	    }
-	    if (highlight) {
-	      series1['stroke-width'] = "8px";	      
-	    }
-	    
-	    var series2 = {
-  		  values: cos,
+
+      if (plotMode == "points") {
+        series1['use-points'] = true;
+      }
+      if (highlight) {
+        series1['stroke-width'] = "8px";
+      }
+
+      var series2 = {
+        values: cos,
         key: 'Cosine Wave',
         color: '#2ca02c'
       };
-	    	   
-	    return [series1, series2];	    
-	  }
+
+      return [series1, series2];
+    }
   });
 </script>
 </body>
